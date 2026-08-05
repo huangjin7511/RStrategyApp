@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>R策略切换面板</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0D1117;
+    color: #E6EDF3;
+    padding: 12px;
+    font-size: 14px;
+}
+.header {
+    text-align: center;
+    margin-bottom: 16px;
+}
+.header h1 {
+    font-size: 20px;
+    color: #58A6FF;
+    margin-bottom: 4px;
+}
+.header .subtitle {
+    font-size: 12px;
+    color: #8B949E;
+}
+.signal-panel {
+    background: linear-gradient(135deg, #161B22, #1C2333);
+    border: 1px solid #30363D;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 16px;
+}
+.signal-panel .r-value {
+    font-size: 42px;
+    font-weight: 700;
+    margin: 8px 0;
+}
+.signal-panel .signal-text {
+    font-size: 18px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 8px;
+    display: inline-block;
+    margin-top: 8px;
+}
+.signal-buy { color: #FF6B6B; }
+.signal-sell { color: #51CF66; }
+.signal-hold { color: #FFD43B; }
+.bg-buy { background: rgba(255,107,107,0.15); border: 1px solid rgba(255,107,107,0.4); }
+.bg-sell { background: rgba(81,207,102,0.15); border: 1px solid rgba(81,207,102,0.4); }
+.bg-hold { background: rgba(255,212,59,0.15); border: 1px solid rgba(255,212,59,0.4); }
+
+.threshold-panel {
+    background: #161B22;
+    border: 1px solid #30363D;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 16px;
+}
+.threshold-panel h3 {
+    font-size: 14px;
+    color: #58A6FF;
+    margin-bottom: 10px;
+}
+.threshold-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+.threshold-item {
+    flex: 1;
+    min-width: 120px;
+}
+.threshold-item label {
+    display: block;
+    font-size: 11px;
+    color: #8B949E;
+    margin-bottom: 4px;
+}
+.threshold-item input {
+    width: 100%;
+    padding: 8px;
+    background: #0D1117;
+    border: 1px solid #30363D;
+    border-radius: 6px;
+    color: #E6EDF3;
+    font-size: 14px;
+    text-align: center;
+}
+.threshold-item input:focus {
+    outline: none;
+    border-color: #58A6FF;
+}
+.btn-apply {
+    width: 100%;
+    padding: 10px;
+    background: #238636;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+}
+.btn-apply:active { background: #2EA043; }
+.btn-refresh {
+    width: 100%;
+    padding: 8px;
+    background: #1F6FEB;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    margin-top: 6px;
+}
+.btn-refresh:active { background: #388BFD; }
+
+.index-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.index-card {
+    background: #161B22;
+    border: 1px solid #30363D;
+    border-radius: 10px;
+    padding: 12px;
+}
+.index-card .name {
+    font-size: 12px;
+    color: #8B949E;
+    margin-bottom: 4px;
+}
+.index-card .price {
+    font-size: 20px;
+    font-weight: 700;
+    color: #E6EDF3;
+}
+.index-card .change {
+    font-size: 12px;
+    margin-top: 4px;
+}
+.up { color: #FF6B6B; }
+.down { color: #51CF66; }
+
+.chart-container {
+    background: #161B22;
+    border: 1px solid #30363D;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 16px;
+}
+.chart-container h3 {
+    font-size: 14px;
+    color: #58A6FF;
+    margin-bottom: 10px;
+}
+.chart-wrapper {
+    position: relative;
+    height: 220px;
+}
+
+.log-panel {
+    background: #161B22;
+    border: 1px solid #30363D;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 16px;
+}
+.log-panel h3 {
+    font-size: 14px;
+    color: #58A6FF;
+    margin-bottom: 10px;
+}
+.log-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #21262D;
+    font-size: 12px;
+}
+.log-item:last-child { border-bottom: none; }
+.log-date { color: #8B949E; }
+.log-signal-buy { color: #FF6B6B; font-weight: 600; }
+.log-signal-sell { color: #51CF66; font-weight: 600; }
+.log-r { color: #58A6FF; }
+
+.status-bar {
+    text-align: center;
+    font-size: 11px;
+    color: #484F58;
+    margin-top: 8px;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+    <h1>📊 R策略切换面板</h1>
+    <div class="subtitle">R = 创业板价格 ÷ 红利价格（全收益口径）</div>
+</div>
+
+<!-- 信号面板 -->
+<div class="signal-panel" id="signalPanel">
+    <div style="font-size:12px;color:#8B949E;">当前 R 值</div>
+    <div class="r-value" id="rValue">--</div>
+    <div class="signal-text" id="signalText">等待数据...</div>
+</div>
+
+<!-- 阈值设置 -->
+<div class="threshold-panel">
+    <h3>⚙️ 阈值设置（可修改）</h3>
+    <div class="threshold-row">
+        <div class="threshold-item">
+            <label>买入阈值 (R &lt;)</label>
+            <input type="number" id="buyThreshold" value="0.45" step="0.01" min="0.1" max="2.0">
+        </div>
+        <div class="threshold-item">
+            <label>卖出阈值 (R &gt;)</label>
+            <input type="number" id="sellThreshold" value="0.95" step="0.01" min="0.1" max="2.0">
+        </div>
+    </div>
+    <div class="threshold-row">
+        <div class="threshold-item">
+            <label>创业板全收益系数</label>
+            <input type="number" id="chinextFactor" value="1.10" step="0.01" min="1.0" max="2.0">
+        </div>
+        <div class="threshold-item">
+            <label>红利全收益系数</label>
+            <input type="number" id="dividendFactor" value="1.55" step="0.01" min="1.0" max="3.0">
+        </div>
+    </div>
+    <button class="btn-apply" onclick="applyThresholds()">✅ 应用阈值</button>
+    <button class="btn-refresh" onclick="requestRefresh()">🔄 刷新数据</button>
+</div>
+
+<!-- 指数卡片 -->
+<div class="index-grid">
+    <div class="index-card">
+        <div class="name">创业板指 (399006)</div>
+        <div class="price" id="chinextPrice">--</div>
+        <div class="change" id="chinextChange">--</div>
+    </div>
+    <div class="index-card">
+        <div class="name">中证红利 (000922)</div>
+        <div class="price" id="dividendPrice">--</div>
+        <div class="change" id="dividendChange">--</div>
+    </div>
+</div>
+
+<!-- R值走势图 -->
+<div class="chart-container">
+    <h3>📈 R值走势（近60日）</h3>
+    <div class="chart-wrapper">
+        <canvas id="rChart"></canvas>
+    </div>
+</div>
+
+<!-- 信号日志 -->
+<div class="log-panel">
+    <h3>📋 信号记录</h3>
+    <div id="signalLog">
+        <div style="color:#484F58;font-size:12px;">暂无信号记录</div>
+    </div>
+</div>
+
+<div class="status-bar" id="statusBar">初始化中...</div>
+
+<script>
+// ========== 全局状态 ==========
+let state = {
+    buyThreshold: 0.45,
+    sellThreshold: 0.95,
+    chinextFactor: 1.10,
+    dividendFactor: 1.55,
+    chinextPrice: 0,
+    dividendPrice: 0,
+    rValue: 0,
+    historyR: [],
+    historyLabels: [],
+    signalLog: [],
+    lastSignal: 'hold'  // buy / sell / hold
+};
+
+// 从 localStorage 恢复阈值
+function loadSettings() {
+    try {
+        const s = localStorage.getItem('rStrategySettings');
+        if (s) {
+            const parsed = JSON.parse(s);
+            state.buyThreshold = parsed.buyThreshold || 0.45;
+            state.sellThreshold = parsed.sellThreshold || 0.95;
+            state.chinextFactor = parsed.chinextFactor || 1.10;
+            state.dividendFactor = parsed.dividendFactor || 1.55;
+        }
+        const log = localStorage.getItem('rStrategyLog');
+        if (log) state.signalLog = JSON.parse(log);
+    } catch(e) {}
+    // 同步到输入框
+    document.getElementById('buyThreshold').value = state.buyThreshold;
+    document.getElementById('sellThreshold').value = state.sellThreshold;
+    document.getElementById('chinextFactor').value = state.chinextFactor;
+    document.getElementById('dividendFactor').value = state.dividendFactor;
+}
+
+function saveSettings() {
+    localStorage.setItem('rStrategySettings', JSON.stringify({
+        buyThreshold: state.buyThreshold,
+        sellThreshold: state.sellThreshold,
+        chinextFactor: state.chinextFactor,
+        dividendFactor: state.dividendFactor
+    }));
+}
+
+// ========== 数据接收 ==========
+window.receiveData = function(jsonStr) {
+    try {
+        const data = JSON.parse(jsonStr);
+        if (data.fallback) {
+            setStatus('⚠️ 使用模拟数据（网络不可用）');
+        } else {
+            setStatus('✅ 数据更新于 ' + new Date(data.timestamp || Date.now()).toLocaleTimeString());
+        }
+
+        // 解析指数数据
+        const chinext = data.chinext || {};
+        const dividend = data.dividend || {};
+
+        // 应用全收益系数
+        const chinextTR = (chinext.price || 0) * state.chinextFactor;
+        const dividendTR = (dividend.price || 0) * state.dividendFactor;
+
+        state.chinextPrice = chinext.price || 0;
+        state.dividendPrice = dividend.price || 0;
+        state.rValue = dividendTR > 0 ? (chinextTR / dividendTR) : 0;
+
+        // 更新UI
+        updateIndexCards(chinext, dividend);
+        updateSignalPanel();
+        processHistory(data.history);
+        checkSignal();
+        renderChart();
+        renderLog();
+
+    } catch(e) {
+        setStatus('❌ 数据解析错误: ' + e.message);
+    }
+};
+
+function updateIndexCards(c, d) {
+    document.getElementById('chinextPrice').textContent = (c.price || 0).toFixed(2);
+    document.getElementById('dividendPrice').textContent = (d.price || 0).toFixed(2);
+
+    const cc = document.getElementById('chinextChange');
+    const cp = c.changePercent || 0;
+    cc.textContent = (cp >= 0 ? '▲ +' : '▼ ') + cp.toFixed(2) + '%';
+    cc.className = 'change ' + (cp >= 0 ? 'up' : 'down');
+
+    const dc = document.getElementById('dividendChange');
+    const dp = d.changePercent || 0;
+    dc.textContent = (dp >= 0 ? '▲ +' : '▼ ') + dp.toFixed(2) + '%';
+    dc.className = 'change ' + (dp >= 0 ? 'up' : 'down');
+}
+
+function updateSignalPanel() {
+    const r = state.rValue;
+    const el = document.getElementById('rValue');
+    const txt = document.getElementById('signalText');
+    const panel = document.getElementById('signalPanel');
+
+    el.textContent = r > 0 ? r.toFixed(4) : '--';
+
+    if (r < state.buyThreshold) {
+        txt.textContent = '🔴 切换至创业板';
+        txt.className = 'signal-text bg-buy signal-buy';
+    } else if (r > state.sellThreshold) {
+        txt.textContent = '🟢 切换至中证红利';
+        txt.className = 'signal-text bg-sell signal-sell';
+    } else {
+        txt.textContent = '🔵 观察区（持有当前）';
+        txt.className = 'signal-text bg-hold signal-hold';
+    }
+}
+
+function processHistory(history) {
+    if (!history || !history.sz399006 || !history.sh000922) return;
+    try {
+        const cData = JSON.parse(history.sz399006);
+        const dData = JSON.parse(history.sh000922);
+        const cArr = cData.day || cData.data?.sz399006?.day || [];
+        const dArr = dData.day || dData.data?.sh000922?.day || [];
+
+        const len = Math.min(cArr.length, dArr.length);
+        state.historyLabels = [];
+        state.historyR = [];
+        for (let i = 0; i < len; i++) {
+            const cp = parseFloat(cArr[i][2]) * state.chinextFactor;
+            const dp = parseFloat(dArr[i][2]) * state.dividendFactor;
+            if (dp > 0) {
+                state.historyLabels.push(cArr[i][0].substring(5));
+                state.historyR.push(cp / dp);
+            }
+        }
+    } catch(e) {
+        console.warn('历史数据解析失败', e);
+    }
+}
+
+function checkSignal() {
+    const r = state.rValue;
+    let currentSignal = 'hold';
+    if (r < state.buyThreshold) currentSignal = 'buy';
+    else if (r > state.sellThreshold) currentSignal = 'sell';
+
+    // 只在信号变化时记录
+    if (currentSignal !== state.lastSignal && r > 0) {
+        const logEntry = {
+            date: new Date().toLocaleString('zh-CN'),
+            signal: currentSignal,
+            r: r,
+            chinext: state.chinextPrice,
+            dividend: state.dividendPrice
+        };
+        state.signalLog.unshift(logEntry);
+        if (state.signalLog.length > 50) state.signalLog.pop();
+        localStorage.setItem('rStrategyLog', JSON.stringify(state.signalLog));
+        state.lastSignal = currentSignal;
+    }
+}
+
+// ========== 图表 ==========
+let chartInstance = null;
+
+function renderChart() {
+    const ctx = document.getElementById('rChart').getContext('2d');
+
+    if (chartInstance) chartInstance.destroy();
+
+    const labels = state.historyLabels.length > 0 ? state.historyLabels : ['--'];
+    const data = state.historyR.length > 0 ? state.historyR : [0];
+
+    // 给数据点着色
+    const colors = data.map(r => {
+        if (r < state.buyThreshold) return '#FF6B6B';
+        if (r > state.sellThreshold) return '#51CF66';
+        return '#58A6FF';
+    });
+
+    chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'R值',
+                data: data,
+                borderColor: '#58A6FF',
+                backgroundColor: 'rgba(88,166,255,0.1)',
+                pointBackgroundColor: colors,
+                pointRadius: 3,
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3
+            }, {
+                label: '买入阈值',
+                data: new Array(labels.length).fill(state.buyThreshold),
+                borderColor: '#FF6B6B',
+                borderWidth: 1,
+                borderDash: [5, 5],
+                pointRadius: 0,
+                fill: false
+            }, {
+                label: '卖出阈值',
+                data: new Array(labels.length).fill(state.sellThreshold),
+                borderColor: '#51CF66',
+                borderWidth: 1,
+                borderDash: [5, 5],
+                pointRadius: 0,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: { color: '#8B949E', font: { size: 10 } }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#484F58', font: { size: 9 }, maxTicksLimit: 10 },
+                    grid: { color: '#21262D' }
+                },
+                y: {
+                    ticks: { color: '#8B949E', font: { size: 10 } },
+                    grid: { color: '#21262D' }
+                }
+            }
+        }
+    });
+}
+
+// ========== 信号日志 ==========
+function renderLog() {
+    const container = document.getElementById('signalLog');
+    if (state.signalLog.length === 0) {
+        container.innerHTML = '<div style="color:#484F58;font-size:12px;">暂无信号记录</div>';
+        return;
+    }
+    container.innerHTML = state.signalLog.map(item => {
+        const cls = item.signal === 'buy' ? 'log-signal-buy' : 'log-signal-sell';
+        const txt = item.signal === 'buy' ? '🔴→创业板' : '🟢→红利';
+        return `<div class="log-item">
+            <span class="log-date">${item.date}</span>
+            <span class="${cls}">${txt}</span>
+            <span class="log-r">R=${item.r.toFixed(3)}</span>
+        </div>`;
+    }).join('');
+}
+
+// ========== 交互 ==========
+function applyThresholds() {
+    state.buyThreshold = parseFloat(document.getElementById('buyThreshold').value) || 0.45;
+    state.sellThreshold = parseFloat(document.getElementById('sellThreshold').value) || 0.95;
+    state.chinextFactor = parseFloat(document.getElementById('chinextFactor').value) || 1.10;
+    state.dividendFactor = parseFloat(document.getElementById('dividendFactor').value) || 1.55;
+    saveSettings();
+    updateSignalPanel();
+    renderChart();
+    setStatus('✅ 阈值已更新');
+}
+
+function requestRefresh() {
+    setStatus('🔄 正在刷新...');
+    if (window.AndroidBridge && window.AndroidBridge.refreshData) {
+        window.AndroidBridge.refreshData();
+    }
+}
+
+function setStatus(msg) {
+    document.getElementById('statusBar').textContent = msg;
+}
+
+// ========== 初始化 ==========
+loadSettings();
+
+// 请求原生层提供数据
+if (window.AndroidBridge && window.AndroidBridge.getData) {
+    const cached = window.AndroidBridge.getData();
+    if (cached && cached !== '{}') {
+        window.receiveData(cached);
+    }
+}
+
+// 定时刷新（每5分钟）
+setInterval(() => {
+    if (window.AndroidBridge && window.AndroidBridge.refreshData) {
+        window.AndroidBridge.refreshData();
+    }
+}, 300000);
+</script>
+</body>
+</html>
