@@ -23,6 +23,15 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+      - name: Setup Gradle Wrapper (if missing)
+        run: |
+          if [ ! -f gradlew ]; then
+            curl -sL "https://services.gradle.org/distributions/gradle-8.7-bin.zip" -o gradle.zip
+            unzip -q gradle.zip
+            GRADLE_HOME=$(pwd)/gradle-8.7
+            $GRADLE_HOME/bin/gradle wrapper --gradle-version 8.7
+            rm -rf gradle-8.7 gradle.zip
+          fi
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Lint check
@@ -39,6 +48,15 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+      - name: Setup Gradle Wrapper (if missing)
+        run: |
+          if [ ! -f gradlew ]; then
+            curl -sL "https://services.gradle.org/distributions/gradle-8.7-bin.zip" -o gradle.zip
+            unzip -q gradle.zip
+            GRADLE_HOME=$(pwd)/gradle-8.7
+            $GRADLE_HOME/bin/gradle wrapper --gradle-version 8.7
+            rm -rf gradle-8.7 gradle.zip
+          fi
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Build debug APK
@@ -61,6 +79,15 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+      - name: Setup Gradle Wrapper (if missing)
+        run: |
+          if [ ! -f gradlew ]; then
+            curl -sL "https://services.gradle.org/distributions/gradle-8.7-bin.zip" -o gradle.zip
+            unzip -q gradle.zip
+            GRADLE_HOME=$(pwd)/gradle-8.7
+            $GRADLE_HOME/bin/gradle wrapper --gradle-version 8.7
+            rm -rf gradle-8.7 gradle.zip
+          fi
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Decode keystore
